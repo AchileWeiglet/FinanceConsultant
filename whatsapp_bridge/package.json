@@ -1,0 +1,17 @@
+{
+  "name": "whatsapp-trading-bot-bridge",
+  "version": "1.0.0",
+  "description": "WhatsApp bridge for the crypto trading bot",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "install-deps": "npm install"
+  },
+  "dependencies": {
+    "whatsapp-web.js": "^1.21.0",
+    "qrcode-terminal": "^0.12.0"
+  },
+  "keywords": ["whatsapp", "bot", "trading", "crypto"],
+  "author": "Trading Bot",
+  "license": "MIT"
+}

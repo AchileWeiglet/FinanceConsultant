@@ -1,0 +1,100 @@
+"""
+JSON schemas for structured LLM communication.
+Defines the expected format for Ollama responses.
+"""
+
+from typing import Literal, Optional
+from pydantic import BaseModel, Field
+
+
+class TradingAnalysis(BaseModel):
+    """Schema for Ollama's trading analysis response."""
+    
+    intention: Literal["buy", "sell", "consult", "nothing"] = Field(
+        description="The recommended action based on analysis"
+    )
+    analysis: str = Field(
+        description="Detailed analysis of the current market situation"
+    )
+    suggested_action: str = Field(
+        description="Human-readable suggestion for the user"
+    )
+    endpoint: Optional[str] = Field(
+        default=None,
+        description="Binance API endpoint to use (if applicable)"
+    )
+    amount: Optional[float] = Field(
+        default=None,
+        description="Suggested trade amount in BTC"
+    )
+    confidence: float = Field(
+        default=0.5,
+        ge=0.0,
+        le=1.0,
+        description="Confidence level of the analysis (0-1)"
+    )
+    risk_level: Literal["low", "medium", "high"] = Field(
+        default="medium",
+        description="Risk assessment of the suggested action"
+    )
+
+
+class UserMessage(BaseModel):
+    """Schema for incoming user messages."""
+    
+    text: str = Field(description="The user's message text")
+    user_id: str = Field(description="Telegram user ID")
+    timestamp: str = Field(description="Message timestamp")
+
+
+class BotResponse(BaseModel):
+    """Schema for bot responses to users."""
+    
+    message: str = Field(description="Response message to send to user")
+    show_confirmation: bool = Field(
+        default=False,
+        description="Whether to show trade confirmation buttons"
+    )
+    trade_data: Optional[TradingAnalysis] = Field(
+        default=None,
+        description="Trade data if confirmation is needed"
+    )
+
+
+class IntentClassification(BaseModel):
+    """Schema for intent classification response."""
+    
+    intent: Literal[
+        "btc_price_info", 
+        "usdt_balance_info", 
+        "portfolio_value", 
+        "market_analysis", 
+        "risk_assessment", 
+        "trading_decision", 
+        "volatile_market", 
+        "portfolio_analysis", 
+        "general_consult", 
+        "error_recovery"
+    ] = Field(description="Classified intent category")
+    
+    confidence: float = Field(
+        ge=0.0,
+        le=1.0,
+        description="Confidence level of the classification (0-1)"
+    )
+    
+    reasoning: str = Field(
+        description="Explanation of why this intent was chosen"
+    )
+    
+    suggested_prompt_function: str = Field(
+        description="Function name from prompts.py to use"
+    )
+    
+    required_data: list[str] = Field(
+        description="List of data needed to execute this intent"
+    )
+    
+    user_query_type: Literal["information", "analysis", "trading", "consultation"] = Field(
+        description="Type of user query"
+    )

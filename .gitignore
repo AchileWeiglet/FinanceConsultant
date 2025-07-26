@@ -1,0 +1,36 @@
+
+# Environment variables
+.env
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Logs
+*.log
+
+# Virtual environment
+venv/
+env/
+
+# Node.js dependencies (anywhere in the project)
+**/node_modules/
+node_modules/
+package-lock.json
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# WhatsApp Bridge cache and session files
+whatsapp_bridge/.wwebjs_auth/
+whatsapp_bridge/messages.json
+whatsapp_bridge/outgoing.json
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
