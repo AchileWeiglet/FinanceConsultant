@@ -59,9 +59,12 @@ class OpenAIHandler:
     async def _call_openai(self, prompt: str) -> str:
         """Make API request to OpenAI."""
         try:
-            response = await self.client.chat.completions.create(
-                model=self.model,
-                messages=[
+            # Check if model supports json_object response format
+            supports_json_format = self.model in ["gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo-1106", "gpt-4-turbo"]
+            
+            request_params = {
+                "model": self.model,
+                "messages": [
                     {
                         "role": "system",
                         "content": "You are a cryptocurrency trading analysis assistant. Always respond with valid JSON only."
@@ -71,10 +74,15 @@ class OpenAIHandler:
                         "content": prompt
                     }
                 ],
-                temperature=0.3,  # Lower temperature for more consistent JSON
-                max_tokens=1000,
-                response_format={"type": "json_object"}  # Ensure JSON response
-            )
+                "temperature": 0.3,  # Lower temperature for more consistent JSON
+                "max_tokens": 1000,
+            }
+            
+            # Only add response_format for supported models
+            if supports_json_format:
+                request_params["response_format"] = {"type": "json_object"}
+            
+            response = await self.client.chat.completions.create(**request_params)
             
             return response.choices[0].message.content or ""
             
@@ -145,3 +153,58 @@ class OpenAIHandler:
         except Exception as e:
             logger.error(f"OpenAI health check failed: {e}")
             return False
+
+
+async def main():
+    """Test OpenAI connection."""
+    print("🔍 Testing OpenAI Connection")
+    print("=" * 40)
+    
+    try:
+        # Import config here to avoid circular imports
+        from .config import load_config
+        
+        # Load configuration
+        config = load_config()
+        print(f"✅ Configuration loaded")
+        print(f"🤖 OpenAI Model: {config.openai_model}")
+        print(f"🔑 API Key: {config.openai_api_key[:10]}..." if config.openai_api_key else "❌ No API key")
+        
+        if not config.openai_api_key:
+            print("❌ OpenAI API key not found in configuration")
+            return
+        
+        # Create OpenAI handler
+        handler = OpenAIHandler(config)
+        print("✅ OpenAI handler created")
+        
+        # Test health check
+        print("🔄 Testing connection...")
+        is_healthy = await handler.health_check()
+        
+        if is_healthy:
+            print("✅ OpenAI connection successful!")
+            
+            # Test a simple analysis
+            print("\n🧪 Testing market analysis...")
+            test_message = "What's the current market sentiment?"
+            test_price_data = "BTC Price: $45,000 (24h change: +2.5%)"
+            
+            result = await handler.analyze_market_data(test_message, test_price_data)
+            print(f"✅ Analysis completed!")
+            print(f"📊 Intention: {result.intention}")
+            print(f"📈 Analysis: {result.analysis[:100]}...")
+            print(f"🎯 Confidence: {result.confidence}")
+            
+        else:
+            print("❌ OpenAI connection failed!")
+            
+    except Exception as e:
+        print(f"❌ Error testing OpenAI: {e}")
+        import traceback
+        traceback.print_exc()
+
+
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(main())

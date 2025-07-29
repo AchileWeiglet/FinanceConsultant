@@ -246,3 +246,66 @@ class OllamaHandler:
         except Exception as e:
             logger.error(f"Ollama health check failed: {e}")
             return False
+
+
+async def main():
+    """Test Ollama connection."""
+    print("🔍 Testing Ollama Connection")
+    print("=" * 40)
+    
+    try:
+        # Import config here to avoid circular imports
+        from .config import load_config
+        
+        # Load configuration
+        config = load_config()
+        print(f"✅ Configuration loaded")
+        print(f"🤖 Ollama Model: {config.ollama_model}")
+        print(f"🔗 Base URL: {config.ollama_base_url}")
+        
+        # Create Ollama handler
+        handler = OllamaHandler(config)
+        print("✅ Ollama handler created")
+        
+        # Test health check
+        print("🔄 Testing connection...")
+        is_healthy = await handler.health_check()
+        
+        if is_healthy:
+            print("✅ Ollama connection successful!")
+            
+            # Test intent classification
+            print("\n🧪 Testing intent classification...")
+            test_message = "What's the current BTC price?"
+            
+            intent_result = await handler.classify_user_intent(test_message)
+            print(f"✅ Intent classification completed!")
+            print(f"🎯 Intent: {intent_result.intent}")
+            print(f"🎯 Confidence: {intent_result.confidence}")
+            print(f"💭 Reasoning: {intent_result.reasoning[:80]}...")
+            
+            # Test market analysis
+            print("\n🧪 Testing market analysis...")
+            test_message = "What's the current market sentiment?"
+            test_price_data = "BTC Price: $45,000 (24h change: +2.5%)"
+            
+            result = await handler.analyze_market_data(test_message, test_price_data)
+            print(f"✅ Analysis completed!")
+            print(f"📊 Intention: {result.intention}")
+            print(f"📈 Analysis: {result.analysis[:100]}...")
+            print(f"🎯 Confidence: {result.confidence}")
+            print(f"⚠️  Risk Level: {result.risk_level}")
+            
+        else:
+            print("❌ Ollama connection failed!")
+            print("💡 Make sure Ollama is running: ollama serve")
+            
+    except Exception as e:
+        print(f"❌ Error testing Ollama: {e}")
+        import traceback
+        traceback.print_exc()
+
+
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(main())
