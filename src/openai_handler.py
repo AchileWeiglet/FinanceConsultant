@@ -96,9 +96,25 @@ class OpenAIHandler:
             data = json.loads(response)
             
             # Validate required fields and set defaults
+            analysis_field = data.get("analysis", "Analysis unavailable")
+            
+            # Handle case where analysis is an object instead of string
+            if isinstance(analysis_field, dict):
+                # Convert object to readable string
+                analysis_text = []
+                for key, value in analysis_field.items():
+                    if isinstance(value, dict):
+                        for subkey, subvalue in value.items():
+                            analysis_text.append(f"{subkey}: {subvalue}")
+                    else:
+                        analysis_text.append(f"{key}: {value}")
+                analysis_field = "; ".join(analysis_text)
+            elif not isinstance(analysis_field, str):
+                analysis_field = str(analysis_field)
+            
             analysis_data = {
                 "intention": data.get("intention", "nothing"),
-                "analysis": data.get("analysis", "Analysis unavailable"),
+                "analysis": analysis_field,
                 "suggested_action": data.get("suggested_action", "No action recommended"),
                 "endpoint": data.get("endpoint"),
                 "amount": min(max(data.get("amount", 0.001), 0.001), 0.01),  # Clamp between 0.001-0.01

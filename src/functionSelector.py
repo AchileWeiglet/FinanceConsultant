@@ -196,22 +196,12 @@ class FunctionSelector:
             price_data = await self.binance.fetch_btc_price_history(self.config.price_analysis_days)
             formatted_data = self.binance.format_price_data_for_llm(price_data)
             
-            # Get AI analysis
-            analysis = await self.analysis_ai_handler.analyze_market_data(user_message, formatted_data)
+            # Check if premium AI comparison is requested
+            if intent.premium_ai_requested and intent.requested_ai_provider in ["openai", "gemini"]:
+                return await self._handle_premium_ai_comparison(user_message, formatted_data, intent, "market_analysis")
             
-            message = f"""📊 Market Analysis:
-📊 Analysis: {analysis.analysis}
-💡 Suggestion: {analysis.suggested_action}
-🎯 Confidence: {analysis.confidence:.1%}
-⚠️ Risk Level: {analysis.risk_level.upper()}"""
-            
-            return {
-                "response_type": "market_analysis",
-                "data": analysis,
-                "message": message,
-                "success": True,
-                "requires_trade_confirmation": analysis.intention in ["buy", "sell"] and analysis.amount > 0
-            }
+            # Standard analysis (Ollama only)
+            return await self._get_standard_analysis(user_message, formatted_data, "market_analysis")
             
         except Exception as e:
             logger.error(f"Error handling market analysis: {e}")
@@ -259,7 +249,13 @@ class FunctionSelector:
             price_data = await self.binance.fetch_btc_price_history(self.config.price_analysis_days)
             formatted_data = self.binance.format_price_data_for_llm(price_data)
             
-            # Get AI trading decision
+            # Check if premium AI was requested
+            if intent.premium_ai_requested and intent.requested_ai_provider != "none":
+                return await self._handle_premium_ai_comparison(
+                    user_message, formatted_data, intent, "trading_decision"
+                )
+            
+            # Standard analysis with configured AI
             analysis = await self.analysis_ai_handler.analyze_market_data(user_message, formatted_data)
             
             message = f"""🎯 Trading Decision:
@@ -443,3 +439,130 @@ Type /help for more information."""
                 "message": "❌ Critical error occurred. Please restart the bot.",
                 "success": False
             }
+    
+    async def _handle_premium_ai_comparison(self, user_message: str, formatted_data: str, intent: IntentClassification, analysis_type: str) -> Dict[str, Any]:
+        """Handle premium AI comparison analysis."""
+        try:
+            # Create premium AI handler based on requested provider
+            if intent.requested_ai_provider == "openai":
+                from .openai_handler import OpenAIHandler
+                premium_handler = OpenAIHandler(self.config)
+                provider_name = "OpenAI GPT-4"
+            elif intent.requested_ai_provider == "gemini":
+                from .gemini_handler import GeminiHandler
+                premium_handler = GeminiHandler(self.config)
+                provider_name = "Google Gemini"
+            else:
+                # Fallback to standard analysis
+                return await self._get_standard_analysis(user_message, formatted_data, analysis_type)
+            
+            # Get both analyses in parallel
+            import asyncio
+            ollama_task = self.analysis_ai_handler.analyze_market_data(user_message, formatted_data)
+            premium_task = premium_handler.analyze_market_data(user_message, formatted_data)
+            
+            ollama_analysis, premium_analysis = await asyncio.gather(ollama_task, premium_task)
+            
+            # Helper function to escape special characters for Telegram
+            def escape_telegram_text(text: str) -> str:
+                """Escape special characters that can cause Telegram parsing issues."""
+                # Remove or replace problematic characters
+                text = text.replace('*', '•')  # Replace asterisks with bullets
+                text = text.replace('_', '-')  # Replace underscores with dashes
+                text = text.replace('[', '(')  # Replace square brackets
+                text = text.replace(']', ')')
+                text = text.replace('`', "'")  # Replace backticks with quotes
+                text = text.replace('~', '-')  # Replace tildes
+                return text
+            
+            # Format comparison message with safe text
+            safe_ollama_analysis = escape_telegram_text(ollama_analysis.analysis[:200])
+            safe_premium_analysis = escape_telegram_text(premium_analysis.analysis[:200])
+            
+            message = f"""🤖 AI Comparison Analysis - {analysis_type.replace('_', ' ').title()}
+
+📱 Ollama (Free) Analysis:
+📊 Recommendation: {escape_telegram_text(ollama_analysis.suggested_action)}
+🎯 Confidence: {ollama_analysis.confidence:.1%}
+⚠️ Risk: {ollama_analysis.risk_level.upper()}
+💭 Analysis: {safe_ollama_analysis}{'...' if len(ollama_analysis.analysis) > 200 else ''}
+
+🧠 {provider_name} (Premium) Analysis:
+📊 Recommendation: {escape_telegram_text(premium_analysis.suggested_action)}
+🎯 Confidence: {premium_analysis.confidence:.1%}
+⚠️ Risk: {premium_analysis.risk_level.upper()}
+💭 Analysis: {safe_premium_analysis}{'...' if len(premium_analysis.analysis) > 200 else ''}
+
+🔍 Comparison Summary:"""
+            
+            # Compare the results
+            if ollama_analysis.intention == premium_analysis.intention:
+                if abs(ollama_analysis.confidence - premium_analysis.confidence) < 0.2:
+                    message += f"\n✅ Both AI models AGREE on the recommendation: {ollama_analysis.intention.upper()}"
+                    message += f"\n🎯 Consensus confidence: {(ollama_analysis.confidence + premium_analysis.confidence) / 2:.1%}"
+                    comparison_result = "agreement"
+                else:
+                    message += f"\n⚖️ Same action but different confidence levels"
+                    comparison_result = "partial_agreement"
+            else:
+                message += f"\n⚠️ CONFLICTING RECOMMENDATIONS"
+                message += f"\n• Ollama suggests: {ollama_analysis.intention.upper()}"
+                message += f"\n• {provider_name} suggests: {premium_analysis.intention.upper()}"
+                message += f"\n• Consider waiting for clearer market signals"
+                comparison_result = "conflict"
+            
+            # Add cost notice
+            cost_estimate = "~$0.01-0.03" if intent.requested_ai_provider == "openai" else "~$0.005-0.015"
+            message += f"\n\n💰 Premium AI usage cost: {cost_estimate}"
+            
+            # Determine which analysis to use for trading decisions
+            if comparison_result == "agreement":
+                final_analysis = premium_analysis if premium_analysis.confidence > ollama_analysis.confidence else ollama_analysis
+            elif comparison_result == "partial_agreement":
+                final_analysis = premium_analysis  # Trust premium for partial agreement
+            else:
+                # For conflicts, create a conservative analysis
+                final_analysis = TradingAnalysis(
+                    intention="nothing",
+                    analysis="AI models disagree - recommend waiting for clearer signals",
+                    suggested_action="Hold position and monitor market conditions",
+                    confidence=0.3,
+                    risk_level="high",
+                    amount=0.001
+                )
+            
+            return {
+                "response_type": f"premium_{analysis_type}",
+                "data": final_analysis,
+                "message": message,
+                "success": True,
+                "comparison_result": comparison_result,
+                "ollama_analysis": ollama_analysis,
+                "premium_analysis": premium_analysis,
+                "premium_provider": intent.requested_ai_provider,
+                "cost_estimate": cost_estimate,
+                "requires_trade_confirmation": final_analysis.intention in ["buy", "sell"] and final_analysis.amount > 0
+            }
+            
+        except Exception as e:
+            logger.error(f"Error in premium AI comparison: {e}")
+            # Fallback to standard analysis
+            return await self._get_standard_analysis(user_message, formatted_data, analysis_type)
+    
+    async def _get_standard_analysis(self, user_message: str, formatted_data: str, analysis_type: str) -> Dict[str, Any]:
+        """Get standard analysis as fallback."""
+        analysis = await self.analysis_ai_handler.analyze_market_data(user_message, formatted_data)
+        
+        message = f"""🎯 {analysis_type.replace('_', ' ').title()}:
+📊 Analysis: {analysis.analysis}
+💡 Recommendation: {analysis.suggested_action}
+🎯 Confidence: {analysis.confidence:.1%}
+⚠️ Risk Level: {analysis.risk_level.upper()}"""
+        
+        return {
+            "response_type": analysis_type,
+            "data": analysis,
+            "message": message,
+            "success": True,
+            "requires_trade_confirmation": analysis.intention in ["buy", "sell"] and analysis.amount > 0
+        }

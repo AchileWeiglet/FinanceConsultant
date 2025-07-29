@@ -98,3 +98,46 @@ class IntentClassification(BaseModel):
     user_query_type: Literal["information", "analysis", "trading", "consultation"] = Field(
         description="Type of user query"
     )
+    
+    premium_ai_requested: bool = Field(
+        default=False,
+        description="Whether user requested premium AI analysis"
+    )
+    
+    requested_ai_provider: Literal["none", "openai", "gemini"] = Field(
+        default="none",
+        description="Specific AI provider requested by user"
+    )
+    
+    comparison_analysis: bool = Field(
+        default=False,
+        description="Whether user wants comparison between multiple AI providers"
+    )
+
+
+class ComparisonAnalysis(BaseModel):
+    """Schema for side-by-side AI comparison analysis."""
+    
+    ollama_analysis: TradingAnalysis = Field(
+        description="Analysis from Ollama (free, default)"
+    )
+    
+    premium_analysis: TradingAnalysis = Field(
+        description="Analysis from premium AI (OpenAI/Gemini)"
+    )
+    
+    premium_provider: Literal["openai", "gemini"] = Field(
+        description="Which premium AI provider was used"
+    )
+    
+    comparison_summary: str = Field(
+        description="Summary comparing both analyses"
+    )
+    
+    recommended_choice: Literal["ollama", "premium", "both_agree", "conflicting"] = Field(
+        description="Which analysis is more reliable or if they agree/conflict"
+    )
+    
+    cost_notice: str = Field(
+        description="Notice about premium AI usage costs"
+    )

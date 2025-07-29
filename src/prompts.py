@@ -22,12 +22,15 @@ AVAILABLE INTENTS:
 
 4. "market_analysis" - User wants detailed market analysis and trading suggestions
    Examples: "Should I buy?", "Market analysis", "Is it a good time to trade?", "BTC trend"
+   Premium AI: "Use OpenAI to analyze", "Get Gemini market analysis", "Compare with OpenAI"
 
 5. "risk_assessment" - User wants risk evaluation for a specific trade
    Examples: "Is it risky to buy now?", "Risk of selling", "How risky is this trade?"
+   Premium AI: "Use OpenAI for risk analysis", "Gemini risk assessment", "Premium risk analysis"
 
 6. "trading_decision" - User wants specific trading recommendations
    Examples: "Should I buy or sell?", "Give me trading advice", "What should I do?"
+   Premium AI: "Use OpenAI to decide", "Get Gemini trading advice", "Premium trading analysis"
 
 7. "volatile_market" - User mentions high volatility or market uncertainty
    Examples: "Market is crazy", "Too volatile", "Prices jumping around"
@@ -37,6 +40,7 @@ AVAILABLE INTENTS:
 
 9. "general_consult" - General questions about crypto or system status
    Examples: "How does this work?", "System status", "Help", "What can you do?"
+   Premium AI: "Use OpenAI to explain", "Get Gemini consultation", "Premium analysis help"
 
 10. "error_recovery" - When unable to determine intent clearly
     Use this when the message is unclear or doesn't fit other categories
@@ -48,7 +52,10 @@ RESPONSE FORMAT (JSON only):
     "reasoning": "Why you chose this intent",
     "suggested_prompt_function": "function name from prompts.py to use",
     "required_data": ["list", "of", "data", "needed"],
-    "user_query_type": "information/analysis/trading/consultation"
+    "user_query_type": "information/analysis/trading/consultation",
+    "premium_ai_requested": false,
+    "requested_ai_provider": "none",
+    "comparison_analysis": false
 }}
 
 CLASSIFICATION RULES:
@@ -61,6 +68,14 @@ CLASSIFICATION RULES:
 - If user wants portfolio advice → "portfolio_analysis"
 - If unclear or general questions → "general_consult"
 - If message is confusing → "error_recovery"
+
+PREMIUM AI DETECTION:
+- Set "premium_ai_requested": true if user mentions "OpenAI", "Gemini", "premium", "paid AI", "better analysis"
+- Set "requested_ai_provider": "openai" if user mentions "OpenAI", "GPT", "ChatGPT"
+- Set "requested_ai_provider": "gemini" if user mentions "Gemini", "Google AI", "Bard"
+- Set "comparison_analysis": true if user wants to compare multiple AI responses
+- Only applies to intents: market_analysis, risk_assessment, trading_decision, general_consult
+- Premium AI requests incur costs and should be used sparingly
 
 Be precise in your classification. Match the intent to the most specific category that fits the user's request.
 

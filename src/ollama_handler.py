@@ -75,7 +75,10 @@ class OllamaHandler:
                 reasoning=f"Error occurred during classification: {str(e)}",
                 suggested_prompt_function="get_error_recovery_prompt",
                 required_data=["error_info", "available_data"],
-                user_query_type="consultation"
+                user_query_type="consultation",
+                premium_ai_requested=False,
+                requested_ai_provider="none",
+                comparison_analysis=False
             )
     
     def _build_analysis_prompt(self, user_message: str, price_data: str) -> str:
@@ -193,10 +196,23 @@ class OllamaHandler:
                 "reasoning": data.get("reasoning", "Intent classification completed"),
                 "suggested_prompt_function": data.get("suggested_prompt_function", "get_error_recovery_prompt"),
                 "required_data": data.get("required_data", []),
-                "user_query_type": data.get("user_query_type", "consultation")
+                "user_query_type": data.get("user_query_type", "consultation"),
+                "premium_ai_requested": data.get("premium_ai_requested", False),
+                "requested_ai_provider": data.get("requested_ai_provider", "none"),
+                "comparison_analysis": data.get("comparison_analysis", False)
             }
             
-            # Validate intent against allowed values
+            # Validate requested_ai_provider
+            if intent_data["requested_ai_provider"] not in ["none", "openai", "gemini"]:
+                intent_data["requested_ai_provider"] = "none"
+                intent_data["premium_ai_requested"] = False
+            
+            # Ensure consistency between premium_ai_requested and requested_ai_provider
+            if intent_data["requested_ai_provider"] != "none":
+                intent_data["premium_ai_requested"] = True
+            elif intent_data["premium_ai_requested"] and intent_data["requested_ai_provider"] == "none":
+                # If premium AI requested but no specific provider, default to openai
+                intent_data["requested_ai_provider"] = "openai"
             valid_intents = [
                 "btc_price_info", "usdt_balance_info", "portfolio_value", 
                 "market_analysis", "risk_assessment", "trading_decision", 
@@ -219,7 +235,10 @@ class OllamaHandler:
                 reasoning=f"JSON parsing error: {str(e)}",
                 suggested_prompt_function="get_error_recovery_prompt",
                 required_data=["error_info", "available_data"],
-                user_query_type="consultation"
+                user_query_type="consultation",
+                premium_ai_requested=False,
+                requested_ai_provider="none",
+                comparison_analysis=False
             )
         except Exception as e:
             logger.error(f"Error parsing intent response: {e}")
@@ -230,7 +249,10 @@ class OllamaHandler:
                 reasoning=f"Intent parsing error: {str(e)}",
                 suggested_prompt_function="get_error_recovery_prompt",
                 required_data=["error_info", "available_data"],
-                user_query_type="consultation"
+                user_query_type="consultation",
+                premium_ai_requested=False,
+                requested_ai_provider="none",
+                comparison_analysis=False
             )
     
     async def health_check(self) -> bool:
