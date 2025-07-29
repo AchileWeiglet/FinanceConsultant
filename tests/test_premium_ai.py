@@ -4,7 +4,7 @@
 import asyncio
 import os
 import sys
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from src.functionSelector import FunctionSelector
 from src.config import load_config

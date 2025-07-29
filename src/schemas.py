@@ -74,7 +74,15 @@ class IntentClassification(BaseModel):
         "volatile_market", 
         "portfolio_analysis", 
         "general_consult", 
-        "error_recovery"
+        "error_recovery",
+        "price_alerts",
+        "trade_history",
+        "technical_analysis",
+        "news_sentiment",
+        "stop_loss_management",
+        "dca_strategy",
+        "multi_timeframe",
+        "educational_mode"
     ] = Field(description="Classified intent category")
     
     confidence: float = Field(

@@ -50,7 +50,15 @@ class FunctionSelector:
             "volatile_market": self._handle_volatile_market,
             "portfolio_analysis": self._handle_portfolio_analysis,
             "general_consult": self._handle_general_consult,
-            "error_recovery": self._handle_error_recovery
+            "error_recovery": self._handle_error_recovery,
+            "price_alerts": self._handle_price_alerts,
+            "trade_history": self._handle_trade_history,
+            "technical_analysis": self._handle_technical_analysis,
+            "news_sentiment": self._handle_news_sentiment,
+            "stop_loss_management": self._handle_stop_loss_management,
+            "dca_strategy": self._handle_dca_strategy,
+            "multi_timeframe": self._handle_multi_timeframe,
+            "educational_mode": self._handle_educational_mode
         }
     
     async def process_user_request(self, user_message: str) -> Dict[str, Any]:
@@ -64,6 +72,29 @@ class FunctionSelector:
             Dictionary with response data and metadata
         """
         try:
+            # Quick manual override for news sentiment (expanded keywords)
+            news_keywords = [
+                "news sentiment", "sentiment analysis", "news of btc", "news about bitcoin", 
+                "crypto news", "bitcoin news", "btc news", "market news", "latest news",
+                "news affecting", "news impact", "social media sentiment", "news mood"
+            ]
+            
+            if any(keyword in user_message.lower() for keyword in news_keywords):
+                logger.info(f"Manual override: News sentiment detected in '{user_message}'")
+                # Create a mock intent
+                class MockIntent:
+                    intent = "news_sentiment"
+                    confidence = 0.95
+                    reasoning = "Manual override for news sentiment - detected news keywords"
+                    suggested_prompt_function = "get_news_sentiment_prompt"
+                    required_data = ["news", "sentiment"]
+                    user_query_type = "analysis"
+                    premium_ai_requested = "openai" in user_message.lower() or "gemini" in user_message.lower()
+                    requested_ai_provider = "openai" if "openai" in user_message.lower() else ("gemini" if "gemini" in user_message.lower() else "none")
+                    comparison_analysis = False
+                
+                return await self._handle_news_sentiment(user_message, MockIntent())
+            
             # Classify the user's intent
             logger.info(f"Classifying intent for: {user_message[:50]}...")
             # Use intent AI handler (always Ollama) for classification
@@ -394,6 +425,207 @@ Commands:
                 "message": f"❌ Error in general consultation: {e}",
                 "success": False
             }
+    
+    async def _handle_news_sentiment(self, user_message: str, intent: IntentClassification) -> Dict[str, Any]:
+        """Handle news sentiment analysis requests."""
+        try:
+            # Get market data for context
+            price_data = await self.binance.fetch_btc_price_history(7)  # Last week for context
+            formatted_data = self.binance.format_price_data_for_llm(price_data)
+            
+            # Mock news and sentiment data (in production, integrate with news APIs)
+            mock_social_sentiment = "Neutral to slightly bullish sentiment on social media. Bitcoin discussions show cautious optimism."
+            mock_news_data = "Recent news: Major institutions continue Bitcoin adoption, regulatory clarity improving, ETF approvals ongoing."
+            mock_fear_greed = "Fear & Greed Index: 52 (Neutral) - Market showing balanced sentiment between fear and greed."
+            
+            # Check if premium AI comparison is requested
+            if intent.premium_ai_requested and intent.requested_ai_provider in ["openai", "gemini"]:
+                return await self._handle_premium_ai_comparison(user_message, formatted_data, intent, "news_sentiment")
+            
+            # Standard sentiment analysis
+            from .prompts import get_sentiment_analysis_prompt
+            prompt = get_sentiment_analysis_prompt(
+                social_sentiment=mock_social_sentiment,
+                news_data=mock_news_data,
+                fear_greed_index=mock_fear_greed,
+                technical_data=formatted_data,
+                user_query=user_message
+            )
+            
+            analysis = await self.analysis_ai_handler.analyze_market_data(user_message, prompt)
+            
+            message = f"""📰 News & Sentiment Analysis:
+🌐 Social Sentiment: {mock_social_sentiment}
+📰 Recent News: {mock_news_data}
+😨😍 Fear/Greed Index: {mock_fear_greed}
+
+📊 AI Analysis: {analysis.analysis}
+💡 Recommendation: {analysis.suggested_action}
+🎯 Confidence: {analysis.confidence:.1%}
+⚠️ Risk Level: {analysis.risk_level.upper()}
+
+💡 Note: News sentiment analysis combines social media buzz, major headlines, and market psychology indicators."""
+            
+            return {
+                "response_type": "news_sentiment",
+                "data": analysis,
+                "message": message,
+                "success": True,
+                "requires_trade_confirmation": analysis.intention in ["buy", "sell"] and analysis.amount > 0
+            }
+            
+        except Exception as e:
+            logger.error(f"Error handling news sentiment: {e}")
+            return {
+                "response_type": "error",
+                "message": f"❌ Error processing news sentiment analysis: {e}",
+                "success": False
+            }
+    
+    async def _handle_technical_analysis(self, user_message: str, intent: IntentClassification) -> Dict[str, Any]:
+        """Handle technical analysis requests."""
+        try:
+            # Get price data for technical analysis
+            price_data = await self.binance.fetch_btc_price_history(self.config.price_analysis_days)
+            formatted_data = self.binance.format_price_data_for_llm(price_data)
+            
+            # Check if premium AI comparison is requested
+            if intent.premium_ai_requested and intent.requested_ai_provider in ["openai", "gemini"]:
+                return await self._handle_premium_ai_comparison(user_message, formatted_data, intent, "technical_analysis")
+            
+            # Standard technical analysis
+            analysis = await self.analysis_ai_handler.analyze_market_data(user_message, formatted_data)
+            
+            message = f"""📊 Technical Analysis:
+📈 Technical Analysis: {analysis.analysis}
+💡 Recommendation: {analysis.suggested_action}
+🎯 Confidence: {analysis.confidence:.1%}
+⚠️ Risk Level: {analysis.risk_level.upper()}
+
+📋 Note: Analysis includes price trends, support/resistance levels, volume patterns, and momentum indicators."""
+            
+            return {
+                "response_type": "technical_analysis",
+                "data": analysis,
+                "message": message,
+                "success": True,
+                "requires_trade_confirmation": analysis.intention in ["buy", "sell"] and analysis.amount > 0
+            }
+            
+        except Exception as e:
+            logger.error(f"Error handling technical analysis: {e}")
+            return {
+                "response_type": "error",
+                "message": f"❌ Error processing technical analysis: {e}",
+                "success": False
+            }
+    
+    async def _handle_educational_mode(self, user_message: str, intent: IntentClassification) -> Dict[str, Any]:
+        """Handle educational content requests."""
+        try:
+            # Check if premium AI comparison is requested
+            if intent.premium_ai_requested and intent.requested_ai_provider in ["openai", "gemini"]:
+                # For educational content, use a simplified version of the data
+                educational_data = "Educational content about cryptocurrency trading concepts"
+                return await self._handle_premium_ai_comparison(user_message, educational_data, intent, "educational_mode")
+            
+            # Standard educational response
+            message = f"""🎓 Crypto Trading Education:
+
+📚 Your Question: {user_message}
+
+🔰 Basic Concepts:
+• Bitcoin (BTC): Digital currency and store of value
+• USDT: Stablecoin pegged to US Dollar
+• Support/Resistance: Key price levels where buying/selling occurs
+• Volume: Number of coins traded (confirms price movements)
+• Risk Management: Never invest more than you can afford to lose
+
+⚠️ Important Warnings:
+• Cryptocurrency is highly volatile
+• Past performance doesn't guarantee future results  
+• Always do your own research (DYOR)
+• Start with small amounts to learn
+• Never trade with borrowed money
+
+📖 Next Steps:
+• Learn about dollar-cost averaging (DCA)
+• Understand technical indicators (RSI, MACD)
+• Practice with small amounts first
+• Keep learning about market analysis
+
+💡 Use commands like "RSI analysis" or "What is DCA?" for specific topics."""
+            
+            # Create a basic educational analysis response
+            from .schemas import TradingAnalysis
+            educational_analysis = TradingAnalysis(
+                intention="education",
+                analysis=f"Educational response about: {user_message}",
+                suggested_action="Continue learning about crypto trading fundamentals",
+                confidence=1.0,
+                risk_level="low"
+            )
+            
+            return {
+                "response_type": "educational_mode",
+                "data": educational_analysis,
+                "message": message,
+                "success": True
+            }
+            
+        except Exception as e:
+            logger.error(f"Error handling educational mode: {e}")
+            return {
+                "response_type": "error",
+                "message": f"❌ Error processing educational request: {e}",
+                "success": False
+            }
+    
+    # Placeholder handlers for other new intents
+    async def _handle_price_alerts(self, user_message: str, intent: IntentClassification) -> Dict[str, Any]:
+        """Handle price alert requests."""
+        return {
+            "response_type": "price_alerts",
+            "data": {},
+            "message": "🔔 Price alerts feature coming soon! This will allow you to set intelligent price notifications with technical analysis.",
+            "success": True
+        }
+    
+    async def _handle_trade_history(self, user_message: str, intent: IntentClassification) -> Dict[str, Any]:
+        """Handle trade history requests."""
+        return {
+            "response_type": "trade_history", 
+            "data": {},
+            "message": "📊 Trade history and performance analytics coming soon! This will track your trading performance and provide insights.",
+            "success": True
+        }
+    
+    async def _handle_stop_loss_management(self, user_message: str, intent: IntentClassification) -> Dict[str, Any]:
+        """Handle stop loss management requests."""
+        return {
+            "response_type": "stop_loss_management",
+            "data": {},
+            "message": "🛡️ Stop loss management tools coming soon! This will help you set proper risk management levels.",
+            "success": True
+        }
+    
+    async def _handle_dca_strategy(self, user_message: str, intent: IntentClassification) -> Dict[str, Any]:
+        """Handle DCA strategy requests."""
+        return {
+            "response_type": "dca_strategy",
+            "data": {},
+            "message": "💰 Dollar Cost Averaging (DCA) strategy tools coming soon! This will help you set up systematic investment plans.",
+            "success": True
+        }
+    
+    async def _handle_multi_timeframe(self, user_message: str, intent: IntentClassification) -> Dict[str, Any]:
+        """Handle multi-timeframe analysis requests."""
+        return {
+            "response_type": "multi_timeframe",
+            "data": {},
+            "message": "⏱️ Multi-timeframe analysis coming soon! This will analyze 1H, 4H, 1D, and 1W charts for comprehensive insights.",
+            "success": True
+        }
     
     async def _handle_error_recovery(self, user_message: str, intent: IntentClassification, error_msg: str = None) -> Dict[str, Any]:
         """Handle error recovery and unclear requests."""

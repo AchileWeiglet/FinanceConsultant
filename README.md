@@ -1,6 +1,32 @@
 # Conversational Trading Bot
 
-A proof-of-concept conversational trading bot that integrates **Telegram**, **Ollama LLM**, and **Binance API** for intelligent cryptocurrency trading with human-in-the-loop confirmation.
+A proof-of-concept conversational trading bot that integrates **Telegram**, **Ollama LLM**, and **Binance API** for intelligent cryptoc## 🚀 Running the Bot
+
+### Management Scripts
+
+```bash
+# Check bot status
+./scripts/bot_status.sh
+
+# Quick restart Telegram bot
+./scripts/quick_restart.sh
+
+# Full refresh (all bots)
+./scripts/refresh_bot.sh
+```
+
+### Direct Bot Execution
+
+```bash
+# Start Telegram bot
+python3 scripts/run_telegram_bot.py
+
+# Start WhatsApp bot
+python3 scripts/run_whatsapp_bot.py
+
+# Start console bot
+python3 scripts/run_console_bot.py
+```rading with human-in-the-loop confirmation.
 
 ## 🚀 Features
 
@@ -130,7 +156,40 @@ ollama serve
 3. Add keys to your `.env` file
 4. **Important**: Keep `BINANCE_TESTNET=true` for development!
 
-## 🚀 Running the Bot
+## � Project Structure
+
+```
+├── src/                    # Source code
+│   ├── ai_factory.py      # AI provider factory
+│   ├── binance_handler.py # Binance API integration
+│   ├── config.py          # Configuration management
+│   ├── functionSelector.py # Intent routing and handling
+│   ├── gemini_handler.py  # Google Gemini integration
+│   ├── ollama_handler.py  # Ollama LLM integration
+│   ├── openai_handler.py  # OpenAI API integration
+│   ├── prompts.py         # AI prompts and templates
+│   ├── schemas.py         # Data validation schemas
+│   ├── telegram_bot.py    # Telegram bot implementation
+│   └── whatsapp_bot.py    # WhatsApp bot implementation
+├── scripts/               # Management and run scripts
+│   ├── bot_status.sh      # Check bot status
+│   ├── quick_restart.sh   # Quick Telegram bot restart
+│   ├── refresh_bot.sh     # Full bot refresh
+│   ├── run_telegram_bot.py # Start Telegram bot
+│   ├── run_whatsapp_bot.py # Start WhatsApp bot
+│   └── run_console_bot.py  # Start console bot
+├── tests/                 # Test files
+│   ├── test_setup.py      # Setup tests
+│   ├── test_telegram.py   # Telegram functionality tests
+│   ├── test_news_sentiment.py # News sentiment tests
+│   └── test_*.py          # Various feature tests
+├── whatsapp_bridge/       # WhatsApp integration
+├── .env                   # Environment variables
+├── requirements.txt       # Python dependencies
+└── README.md             # This file
+```
+
+## �🚀 Running the Bot
 
 ```bash
 # Make the run script executable

@@ -2,6 +2,9 @@
 # Bot Status Checker
 # Shows the current status of all bot processes
 
+# Change to parent directory where the bot files are located
+cd "$(dirname "$0")/.."
+
 echo "🤖 Trading Bot Status"
 echo "===================="
 
@@ -63,7 +66,7 @@ if [ -f "whatsapp_trading_bot.log" ]; then
 fi
 
 echo "💡 Commands:"
-echo "  Start: ./refresh_bot.sh"
-echo "  Quick restart: ./quick_restart.sh"
+echo "  Start: ./scripts/refresh_bot.sh"
+echo "  Quick restart: ./scripts/quick_restart.sh"
 echo "  Logs: tail -f trading_bot.log"
 echo "  Stop: pkill -f 'run_.*_bot.py'"

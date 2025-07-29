@@ -2,6 +2,9 @@
 # Quick Bot Restart Script
 # Fast restart of Telegram bot only
 
+# Change to parent directory where the bot files are located
+cd "$(dirname "$0")/.."
+
 echo "🚀 Quick Telegram Bot Restart"
 echo "=============================="
 
@@ -16,7 +19,7 @@ sleep 1
 
 # Start Telegram bot
 echo "🚀 Starting Telegram bot..."
-python3 run_telegram_bot.py &
+python3 scripts/run_telegram_bot.py &
 TELEGRAM_PID=$!
 
 # Check if started successfully

@@ -2,6 +2,9 @@
 # Bot Refresh Script
 # Kills existing bot processes and restarts the Telegram bot
 
+# Change to parent directory where the bot files are located
+cd "$(dirname "$0")/.."
+
 echo "🔄 Refreshing Trading Bot..."
 echo "========================="
 
@@ -123,7 +126,7 @@ print_status "Starting bot(s)..."
 
 start_telegram_bot() {
     print_status "Starting Telegram bot..."
-    python3 run_telegram_bot.py &
+    python3 scripts/run_telegram_bot.py &
     TELEGRAM_PID=$!
     sleep 2
     if ps -p $TELEGRAM_PID > /dev/null; then
@@ -135,7 +138,7 @@ start_telegram_bot() {
 
 start_whatsapp_bot() {
     print_status "Starting WhatsApp bot..."
-    python3 run_whatsapp_bot.py &
+    python3 scripts/run_whatsapp_bot.py &
     WHATSAPP_PID=$!
     sleep 2
     if ps -p $WHATSAPP_PID > /dev/null; then
@@ -147,7 +150,7 @@ start_whatsapp_bot() {
 
 start_console_bot() {
     print_status "Starting Console bot..."
-    python3 run_console_bot.py
+    python3 scripts/run_console_bot.py
     # Console bot runs in foreground, so no background check needed
 }
 

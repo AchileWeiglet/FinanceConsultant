@@ -9,7 +9,7 @@ import os
 import asyncio
 
 # Add src directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 async def test_imports():
     """Test that all required modules can be imported."""
